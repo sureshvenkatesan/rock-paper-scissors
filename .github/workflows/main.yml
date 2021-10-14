@@ -74,7 +74,10 @@ jobs:
           jfrog rt bag
           #Publish build-info
           jfrog rt bp 
-          # Scan build with JFrog Xray
+          # Prerequisite to xray scan a build
+          # 1. Make sure this build is indexed in Admin->Xray->Settings->Indexed Resources->Builds tab( see https://jfrog.com/knowledge-base/xray-how-to-index-and-scan-all-builds-in-xray-in-the-unified-platform/ )
+          # 2. A watch on the build resource is defined and mapped to a policy that has he policy has  option "fail on build" selected ( see https://stackoverflow.com/questions/55992256/xray-scan-does-not-find-any-watch-when-launched-from-azure-devops-pipeline)
+          # 3. Scan build with JFrog Xray and if you do not want the build to fail use "--fail=false"
           jfrog rt bs --fail=false > out.txt
 
           # Show the output
