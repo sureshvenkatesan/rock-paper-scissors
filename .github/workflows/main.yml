@@ -52,7 +52,7 @@ jobs:
           # Init JFrog CLI Maven config
           MVN_PATH=`which mvn` && export M2_HOME=`readlink -f $MVN_PATH | xargs dirname | xargs dirname`
 
-          # Set the artifactory servers for resolving 3rd party dependencies and for deploy
+          # Make sure artifactory servers for resolving 3rd party dependencies and for deploy are   known to JFrog CLI
           jfrog rt mvn-config --server-id-resolve=$SERVER_ID --server-id-deploy=$SERVER_ID --repo-resolve-releases=maven-remote --repo-resolve-snapshots=maven-remote --repo-deploy-releases=backend-libs-release-local --repo-deploy-snapshots=backend-libs-snapshot-local                                                                                                                                                                                                                                                                                                 
           
           # Build the maven project ( see https://www.jfrog.com/confluence/display/JFROG/Setting+Up+CI+Integration)
@@ -65,6 +65,8 @@ jobs:
 
       
       - name: Step7 - Publish to RT
+        env: 
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
         run: |
           # Add env vars
           jfrog rt bce
@@ -77,15 +79,21 @@ jobs:
 
           # Prerequisite to xray scan a build
           # 1. Make sure this build is indexed in Admin->Xray->Settings->Indexed Resources->Builds tab( see https://jfrog.com/knowledge-base/xray-how-to-index-and-scan-all-builds-in-xray-in-the-unified-platform/ )
-          # 2. A watch on the build resource is defined and mapped to a policy that has he policy has  option "fail on build" selected ( see https://stackoverflow.com/questions/55992256/xray-scan-does-not-find-any-watch-when-launched-from-azure-devops-pipeline)
+          # 2. A watch on the build resource is defined and mapped to a policy that has he policy has  option "fail on build" selected 
+          # (see https://stackoverflow.com/questions/55992256/xray-scan-does-not-find-any-watch-when-launched-from-azure-devops-pipeline
+          # and https://www.jfrog.com/confluence/display/JFROG/CI-CD+Integration+with+Xray )
           # 3. Scan build with JFrog Xray and if you do not want the build to fail use "--fail=false" ( see https://www.jfrog.com/confluence/display/CLI/CLI+for+JFrog+Artifactory#CLIforJFrogArtifactory-ScanningaPublishedBuild)
           jfrog rt bs --fail=false > out.txt
 
           # Show the output
           cat out.txt
-          
+
           # Update the PR comment
-          GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}  gh pr comment ${{ github.event.pull_request.head.ref }} --body-file out.txt
+          # see https://cli.github.com/manual/gh_pr_comment
+          # Note: The "gh pr" command needs the GITHUB_TOKEN and for this we use the repository's GITHUB_TOKEN that we set in the env
+          # see https://docs.github.com/en/actions/security-guides/automatic-token-authentication
+          # Add the comment to the PR branch got from "github.event.pull_request.head.ref"  as mentioned in https://github.community/t/how-to-get-pr-branch-name-in-github-actions/16598
+          gh pr comment ${{ github.event.pull_request.head.ref }} --body-file out.txt
 
 
 
